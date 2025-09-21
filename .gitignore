@@ -1,0 +1,9 @@
+# .gitignore
+node_modules/
+sessions/
+temp/
+*.log
+.env
+config/config.js
+database.json
+package-lock.json
