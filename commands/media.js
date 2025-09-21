@@ -2,7 +2,7 @@ const {
     downloadContentFromMessage, 
     generateWAMessageFromContent 
 } = require('@whiskeysockets/baileys');
-const { createSticker, getBuffer } = require('../lib/functions');
+const { createSticker, getBuffer, formatSize } = require('../lib/functions');
 const sharp = require('sharp');
 const fs = require('fs-extra');
 
