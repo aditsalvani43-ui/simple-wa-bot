@@ -51,12 +51,32 @@ async function startBot() {
 
     // Handle pairing code
     if (!sock.authState.creds.registered) {
-        console.log(chalk.yellow('🔗 Generating pairing code...'));
+        console.log(chalk.yellow('🔗 Waiting for phone number to pair...'));
         
-        setTimeout(async () => {
-            const code = await sock.requestPairingCode('62812345678'); // Replace with target number
-            console.log(chalk.green('📱 Pairing Code:'), chalk.bold.white(code));
-        }, 3000);
+        // Get phone number from user input
+        const readline = require('readline');
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        rl.question(chalk.blue('📱 Enter your WhatsApp number (with country code, e.g., 62812345678): '), async (phoneNumber) => {
+            rl.close();
+            
+            console.log(chalk.yellow('🔗 Generating pairing code...'));
+            
+            try {
+                const code = await sock.requestPairingCode(phoneNumber);
+                console.log(chalk.green('📱 Pairing Code:'), chalk.bold.white(code));
+                console.log(chalk.cyan('📋 Steps:'));
+                console.log(chalk.cyan('1. Open WhatsApp on your phone'));
+                console.log(chalk.cyan('2. Go to Settings > Linked Devices'));
+                console.log(chalk.cyan('3. Tap "Link a Device"'));
+                console.log(chalk.cyan('4. Enter the pairing code above'));
+            } catch (error) {
+                console.error(chalk.red('❌ Failed to generate pairing code:'), error);
+            }
+        });
     }
 
     // Connection updates
