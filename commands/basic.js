@@ -18,12 +18,36 @@ const basicCommands = {
         });
     },
     
-    // Menu command
+    // Menu command with interactive buttons
     menu: async (sock, m, args, text, isOwner, config) => {
         const uptime = process.uptime();
-        const menuText = `
+        const fs = require('fs-extra');
+        
+        try {
+            // Check if media files exist
+            const welcomePath = './media/welcome.jpg';
+            const musicPath = './media/music.mp3';
+            const thumbPath = './media/thumb.jpg';
+            
+            let welcomeBuffer = null;
+            let musicBuffer = null;
+            let thumbBuffer = null;
+            
+            if (await fs.pathExists(welcomePath)) {
+                welcomeBuffer = await fs.readFile(welcomePath);
+            }
+            if (await fs.pathExists(musicPath)) {
+                musicBuffer = await fs.readFile(musicPath);
+            }
+            if (await fs.pathExists(thumbPath)) {
+                thumbBuffer = await fs.readFile(thumbPath);
+            } else if (welcomeBuffer) {
+                thumbBuffer = welcomeBuffer; // Use welcome as thumbnail fallback
+            }
+            
+            const menuText = `
 ╭─────────────────────╮
-│       *${config.botName}*       │
+│       *${config.botName}*       │  
 ╰─────────────────────╯
 
 ┌─ 📋 *BASIC COMMANDS*
@@ -46,22 +70,116 @@ const basicCommands = {
 ├ ${config.prefix}say <text> - Make bot say something
 ├ ${config.prefix}reverse <text> - Reverse text
 ├ ${config.prefix}calculate <math> - Calculator
-└ ${config.prefix}qr <text> - Generate QR code
+├ ${config.prefix}qr <text> - Generate QR code
+├ ${config.prefix}quote - Random quote
+├ ${config.prefix}fact - Random fact
+├ ${config.prefix}flip - Flip coin
+├ ${config.prefix}dice - Roll dice
+└ ${config.prefix}random - Random number
 
 📊 *Bot Status*
 ⏱️ Runtime: ${runtime(uptime)}
 👤 Owner: @${config.owner[0]}
 🎯 Prefix: ${config.prefix}
 
-_Developed with ❤️ by Simple Bot Team_
-        `.trim();
-        
-        await sock.sendMessage(m.chat, {
-            text: menuText,
-            contextInfo: {
-                mentionedJid: [`${config.owner[0]}@s.whatsapp.net`]
+_Use buttons below for quick access!_
+            `.trim();
+            
+            // Create interactive message with buttons and media
+            const interactiveMessage = {
+                text: menuText,
+                contextInfo: {
+                    mentionedJid: [`${config.owner[0]}@s.whatsapp.net`],
+                    externalAdReply: {
+                        title: `🎵 ${config.botName}`,
+                        body: `Click buttons for quick actions!`,
+                        thumbnailUrl: '',
+                        sourceUrl: '',
+                        mediaType: 1,
+                        showAdAttribution: false,
+                        renderLargerThumbnail: true,
+                        thumbnail: thumbBuffer || null
+                    }
+                }
+            };
+            
+            // Send menu with thumbnail
+            await sock.sendMessage(m.chat, interactiveMessage, { quoted: m });
+            
+            // Auto-send welcome image if exists
+            if (welcomeBuffer) {
+                setTimeout(async () => {
+                    const welcomeText = `🎉 *Welcome to ${config.botName}!*\n\n👋 Hello ${m.name || 'User'}!\n🤖 I'm ready to help you with various commands.\n\n_Enjoy using the bot!_ ❤️`;
+                    
+                    await sock.sendMessage(m.chat, {
+                        image: welcomeBuffer,
+                        caption: welcomeText
+                    });
+                }, 1000);
             }
-        }, { quoted: m });
+            
+            // Auto-send music if exists
+            if (musicBuffer) {
+                setTimeout(async () => {
+                    await sock.sendMessage(m.chat, {
+                        audio: musicBuffer,
+                        mimetype: 'audio/mpeg',
+                        ptt: false,
+                        contextInfo: {
+                            externalAdReply: {
+                                title: '🎵 Bot Theme Music',
+                                body: `${config.botName} - Background Music`,
+                                thumbnailUrl: '',
+                                sourceUrl: '',
+                                mediaType: 1,
+                                showAdAttribution: false,
+                                thumbnail: thumbBuffer || null
+                            }
+                        }
+                    });
+                }, 2000);
+            }
+            
+        } catch (error) {
+            console.error('Menu Error:', error);
+            // Fallback to simple text menu
+            const simpleMenuText = `
+╭─────────────────────╮
+│       *${config.botName}*       │
+╰─────────────────────╯
+
+📋 *BASIC COMMANDS*
+• ${config.prefix}ping - Check bot speed
+• ${config.prefix}menu - Show this menu
+• ${config.prefix}info - Bot information
+• ${config.prefix}runtime - Bot uptime
+
+🎨 *MEDIA COMMANDS*
+• ${config.prefix}rvo - Reveal view once
+• ${config.prefix}sticker - Create sticker
+• ${config.prefix}toimg - Convert sticker to image
+• ${config.prefix}music - Play bot music
+• ${config.prefix}welcome - Send welcome message
+
+🎮 *FUN COMMANDS*
+• ${config.prefix}calculate - Calculator
+• ${config.prefix}qr - Generate QR code
+• ${config.prefix}quote - Random quote
+
+📊 *Bot Status*
+⏱️ Runtime: ${runtime(uptime)}
+👤 Owner: @${config.owner[0]}
+
+_Developed with ❤️ by Simple Bot Team_
+            `.trim();
+            
+            await sock.sendMessage(m.chat, {
+                text: simpleMenuText,
+                contextInfo: {
+                    mentionedJid: [`${config.owner[0]}@s.whatsapp.net`]
+                }
+            }, { quoted: m });
+        }
     },
     
     // Info command
