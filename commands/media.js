@@ -5,6 +5,7 @@ const {
 const { createSticker, getBuffer, formatSize } = require('../lib/functions');
 const sharp = require('sharp');
 const fs = require('fs-extra');
+const path = require('path');
 
 const mediaCommands = {
     // Reveal view once message
@@ -264,6 +265,191 @@ const mediaCommands = {
             console.error('MediaInfo Error:', error);
             await sock.sendMessage(m.chat, {
                 text: '❌ Failed to get media information!'
+            }, { quoted: m });
+        }
+    },
+
+    // Play music
+    music: async (sock, m, args, text, isOwner, config) => {
+        try {
+            const musicPath = './media/music.mp3';
+            
+            // Check if music file exists
+            if (!await fs.pathExists(musicPath)) {
+                return await sock.sendMessage(m.chat, {
+                    text: '❌ Music file not found!\n📁 Please add music.mp3 to the media folder.'
+                }, { quoted: m });
+            }
+            
+            await sock.sendMessage(m.chat, {
+                text: '🎵 Playing music...'
+            }, { quoted: m });
+            
+            const musicBuffer = await fs.readFile(musicPath);
+            
+            await sock.sendMessage(m.chat, {
+                audio: musicBuffer,
+                mimetype: 'audio/mpeg',
+                ptt: false,
+                contextInfo: {
+                    externalAdReply: {
+                        title: '🎵 Bot Music Player',
+                        body: config.botName,
+                        thumbnailUrl: '',
+                        sourceUrl: '',
+                        mediaType: 1,
+                        showAdAttribution: false,
+                        renderLargerThumbnail: true
+                    }
+                }
+            }, { quoted: m });
+            
+        } catch (error) {
+            console.error('Music Error:', error);
+            await sock.sendMessage(m.chat, {
+                text: '❌ Failed to play music!'
+            }, { quoted: m });
+        }
+    },
+
+    // Send welcome image
+    welcome: async (sock, m, args, text, isOwner, config) => {
+        try {
+            const welcomePath = './media/welcome.jpg';
+            
+            // Check if welcome image exists
+            if (!await fs.pathExists(welcomePath)) {
+                return await sock.sendMessage(m.chat, {
+                    text: '❌ Welcome image not found!\n📁 Please add welcome.jpg to the media folder.'
+                }, { quoted: m });
+            }
+            
+            const welcomeBuffer = await fs.readFile(welcomePath);
+            const welcomeText = `
+🎉 *Welcome to ${config.botName}!* 🎉
+
+👋 Hello ${m.name || 'User'}!
+🤖 I'm a WhatsApp bot ready to help you.
+
+📝 Use *${config.prefix}menu* to see available commands.
+💡 Need help? Contact owner: @${config.owner[0]}
+
+_Thank you for using our bot!_ ❤️
+            `.trim();
+            
+            await sock.sendMessage(m.chat, {
+                image: welcomeBuffer,
+                caption: welcomeText,
+                contextInfo: {
+                    mentionedJid: [`${config.owner[0]}@s.whatsapp.net`]
+                }
+            }, { quoted: m });
+            
+        } catch (error) {
+            console.error('Welcome Error:', error);
+            await sock.sendMessage(m.chat, {
+                text: '❌ Failed to send welcome message!'
+            }, { quoted: m });
+        }
+    },
+
+    // Download media from message
+    download: async (sock, m, args, text, isOwner, config) => {
+        if (!m.quoted || !['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(m.quoted.mtype)) {
+            return await sock.sendMessage(m.chat, {
+                text: '❌ Reply to a media message!'
+            }, { quoted: m });
+        }
+        
+        try {
+            const msg = m.quoted.msg;
+            const type = m.quoted.mtype.replace('Message', '');
+            
+            // Check file size
+            const fileSize = msg.fileLength || 0;
+            if (fileSize > config.maxFileSize) {
+                return await sock.sendMessage(m.chat, {
+                    text: `❌ File too large! Maximum size is ${formatSize(config.maxFileSize)}`
+                }, { quoted: m });
+            }
+            
+            await sock.sendMessage(m.chat, {
+                text: `🔄 Downloading ${type}... (${formatSize(fileSize)})`
+            }, { quoted: m });
+            
+            const media = await downloadContentFromMessage(msg, type);
+            let buffer = Buffer.from([]);
+            for await (const chunk of media) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
+            
+            const fileName = msg.fileName || `download_${Date.now()}.${type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : type === 'audio' ? 'mp3' : 'file'}`;
+            
+            // Save to temp directory
+            const filePath = path.join('./temp', fileName);
+            await fs.writeFile(filePath, buffer);
+            
+            await sock.sendMessage(m.chat, {
+                document: buffer,
+                fileName: fileName,
+                mimetype: msg.mimetype || 'application/octet-stream',
+                caption: `✅ Downloaded: ${fileName}\n📦 Size: ${formatSize(buffer.length)}`
+            }, { quoted: m });
+            
+            // Clean up temp file after 5 minutes
+            setTimeout(async () => {
+                try {
+                    await fs.remove(filePath);
+                } catch (e) {
+                    console.log('Temp file cleanup:', e.message);
+                }
+            }, 5 * 60 * 1000);
+            
+        } catch (error) {
+            console.error('Download Error:', error);
+            await sock.sendMessage(m.chat, {
+                text: '❌ Failed to download media!'
+            }, { quoted: m });
+        }
+    },
+
+    // Get image from URL
+    getimg: async (sock, m, args, text, isOwner, config) => {
+        if (!text) {
+            return await sock.sendMessage(m.chat, {
+                text: '❌ Please provide an image URL!\n📝 Usage: .getimg <url>'
+            }, { quoted: m });
+        }
+        
+        try {
+            // Simple URL validation
+            if (!text.startsWith('http')) {
+                return await sock.sendMessage(m.chat, {
+                    text: '❌ Please provide a valid URL (starting with http/https)'
+                }, { quoted: m });
+            }
+            
+            await sock.sendMessage(m.chat, {
+                text: '🔄 Getting image from URL...'
+            }, { quoted: m });
+            
+            const imageBuffer = await getBuffer(text);
+            
+            if (imageBuffer) {
+                await sock.sendMessage(m.chat, {
+                    image: imageBuffer,
+                    caption: `✅ Image downloaded from URL\n🔗 Source: ${text}`
+                }, { quoted: m });
+            } else {
+                await sock.sendMessage(m.chat, {
+                    text: '❌ Failed to get image from URL!'
+                }, { quoted: m });
+            }
+            
+        } catch (error) {
+            console.error('GetImg Error:', error);
+            await sock.sendMessage(m.chat, {
+                text: '❌ Error getting image from URL!'
             }, { quoted: m });
         }
     }
