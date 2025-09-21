@@ -16,43 +16,63 @@ const mediaCommands = {
         }
         
         try {
+            let media;
+            let type;
+            let caption = '';
+            
+            // Handle different view once message types
             if (m.quoted.mtype === 'viewOnceMessageV2') {
-                const msg = m.quoted.message.viewOnceMessageV2.message;
-                const type = Object.keys(msg)[0];
+                const viewOnceMsg = m.quoted.message.viewOnceMessageV2.message;
+                type = Object.keys(viewOnceMsg)[0];
+                media = viewOnceMsg[type];
+                caption = media.caption || '';
                 
-                if (type === 'imageMessage') {
-                    const media = await downloadContentFromMessage(msg[type], 'image');
-                    let buffer = Buffer.from([]);
-                    for await (const chunk of media) {
-                        buffer = Buffer.concat([buffer, chunk]);
-                    }
-                    
-                    await sock.sendMessage(m.chat, {
-                        image: buffer,
-                        caption: msg[type].caption || '🔓 View once image revealed!'
-                    }, { quoted: m });
-                    
-                } else if (type === 'videoMessage') {
-                    const media = await downloadContentFromMessage(msg[type], 'video');
-                    let buffer = Buffer.from([]);
-                    for await (const chunk of media) {
-                        buffer = Buffer.concat([buffer, chunk]);
-                    }
-                    
-                    await sock.sendMessage(m.chat, {
-                        video: buffer,
-                        caption: msg[type].caption || '🔓 View once video revealed!'
-                    }, { quoted: m });
-                }
+            } else if (m.quoted.mtype === 'viewOnceMessage') {
+                const viewOnceMsg = m.quoted.message.viewOnceMessage.message;
+                type = Object.keys(viewOnceMsg)[0];
+                media = viewOnceMsg[type];
+                caption = media.caption || '';
+                
             } else {
-                await sock.sendMessage(m.chat, {
+                return await sock.sendMessage(m.chat, {
                     text: '❌ This is not a view once message!'
                 }, { quoted: m });
             }
+            
+            if (type === 'imageMessage') {
+                const buffer = await downloadContentFromMessage(media, 'image');
+                let imageBuffer = Buffer.from([]);
+                for await (const chunk of buffer) {
+                    imageBuffer = Buffer.concat([imageBuffer, chunk]);
+                }
+                
+                await sock.sendMessage(m.chat, {
+                    image: imageBuffer,
+                    caption: caption || '🔓 View once image revealed!'
+                }, { quoted: m });
+                
+            } else if (type === 'videoMessage') {
+                const buffer = await downloadContentFromMessage(media, 'video');
+                let videoBuffer = Buffer.from([]);
+                for await (const chunk of buffer) {
+                    videoBuffer = Buffer.concat([videoBuffer, chunk]);
+                }
+                
+                await sock.sendMessage(m.chat, {
+                    video: videoBuffer,
+                    caption: caption || '🔓 View once video revealed!'
+                }, { quoted: m });
+                
+            } else {
+                await sock.sendMessage(m.chat, {
+                    text: '❌ Unsupported view once message type!'
+                }, { quoted: m });
+            }
+            
         } catch (error) {
             console.error('RVO Error:', error);
             await sock.sendMessage(m.chat, {
-                text: '❌ Failed to reveal view once message!'
+                text: '❌ Failed to reveal view once message!\nMake sure you replied to a view once message.'
             }, { quoted: m });
         }
     },
