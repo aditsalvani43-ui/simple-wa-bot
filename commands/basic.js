@@ -36,7 +36,11 @@ const basicCommands = {
 ├ ${config.prefix}rvo - Reveal view once
 ├ ${config.prefix}sticker - Create sticker
 ├ ${config.prefix}toimg - Convert sticker to image
-└ ${config.prefix}take - Change sticker pack info
+├ ${config.prefix}take - Change sticker pack info
+├ ${config.prefix}music - Play bot music
+├ ${config.prefix}welcome - Send welcome message
+├ ${config.prefix}download - Download media
+└ ${config.prefix}getimg - Get image from URL
 
 ┌─ 🎮 *FUN COMMANDS*
 ├ ${config.prefix}say <text> - Make bot say something
