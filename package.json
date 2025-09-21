@@ -1,0 +1,33 @@
+{
+  "name": "simple-wa-bot",
+  "version": "1.0.0",
+  "description": "Simple WhatsApp Bot with basic features",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^8.19.0",
+    "chalk": "^4.1.2",
+    "moment-timezone": "^0.5.45",
+    "fs-extra": "^11.2.0",
+    "axios": "^1.6.7",
+    "node-fetch": "^2.7.0",
+    "sharp": "^0.33.2",
+    "file-type": "^16.5.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
